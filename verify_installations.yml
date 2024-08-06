@@ -1,0 +1,17 @@
+- name: Verify VIM installation
+  command: vim --version
+  register: vim_version
+  changed_when: false
+
+- name: Display VIM version
+  debug:
+    var: vim_version.stdout_lines[0]
+
+- name: Verify Zsh installation
+  command: zsh --version
+  register: zsh_version
+  changed_when: false
+
+- name: Display Zsh version
+  debug:
+    var: zsh_version.stdout_lines[0]

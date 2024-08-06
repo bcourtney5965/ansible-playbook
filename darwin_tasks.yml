@@ -1,0 +1,14 @@
+- name: Check if Homebrew is installed
+  command: brew --version
+  register: brew_installed
+  ignore_errors: true
+  changed_when: false
+
+- name: Install Homebrew if not installed
+  shell: /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  when: brew_installed.failed
+
+- name: Install packages with Homebrew
+  homebrew:
+    name: '{{ packages.values() | list }}'
+    state: present

@@ -1,0 +1,12 @@
+- name: Install Google Chrome
+  package:
+    name: google-chrome-stable
+    state: present
+  when: ansible_os_family != 'Darwin'
+
+- name: Install Firefox
+  package:
+    name: firefox
+    state: present
+  when: ansible_os_family != 'Darwin'
+# Note: For macOS, browsers are installed via Homebrew Cask in darwin_tasks.yml

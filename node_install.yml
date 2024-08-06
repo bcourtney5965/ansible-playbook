@@ -1,0 +1,29 @@
+- name: Install Node.js and npm
+  apt:
+    name:
+      - nodejs
+      - npm
+    state: present
+    update_cache: yes
+  become: yes
+
+- name: Install n (Node version manager)
+  npm:
+    name: n
+    global: yes
+  become: yes
+
+- name: Install latest stable Node.js version
+  shell: n stable
+  become: yes
+
+- name: Set installed Node.js version as default
+  shell: n stable
+  become: yes
+
+- name: Update npm to latest version
+  npm:
+    name: npm
+    global: yes
+    state: latest
+  become: yes

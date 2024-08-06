@@ -1,0 +1,11 @@
+- name: Clone dotfiles repository
+  shell: |
+    git clone --bare https://github.com/bcourtney5965/dotfiles.git $HOME/.dotfiles
+    function config {
+      /usr/bin/git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME $@
+    }
+    config checkout
+    config config status.showUntrackedFiles no
+
+- name: Source .zshrc
+  shell: source ~/.zshrc

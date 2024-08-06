@@ -1,0 +1,14 @@
+- name: Download VS Code
+  get_url:
+    url: "https://code.visualstudio.com/sha/download?build=stable&os={{ 'darwin' if ansible_os_family == 'Darwin' else 'linux-deb' if ansible_os_family == 'Debian' else 'linux-rpm' }}"
+    dest: "/tmp/vscode.{{ 'dmg' if ansible_os_family == 'Darwin' else 'deb' if ansible_os_family == 'Debian' else 'rpm' }}"
+
+- name: Install VS Code
+  package:
+    name: "/tmp/vscode.{{ 'dmg' if ansible_os_family == 'Darwin' else 'deb' if ansible_os_family == 'Debian' else 'rpm' }}"
+    state: present
+  when: ansible_os_family != 'Darwin'
+
+- name: Install VS Code on macOS
+  command: hdiutil attach /tmp/vscode.dmg
+  when: ansible_os_family == 'Darwin'

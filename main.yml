@@ -1,0 +1,130 @@
+---
+- name: Install and configure development environment
+  hosts: localhost
+  connection: local
+  become: true
+
+  vars:
+    common_packages:
+      vim: vim
+      zsh: zsh
+      git: git
+
+  vars_prompt:
+    - name: 'github_username'
+      prompt: 'Enter your GitHub username'
+      private: no
+
+    - name: 'github_token'
+      prompt: 'Enter your GitHub personal access token'
+      private: no
+
+    - name: 'npm_username'
+      prompt: 'Enter your npm username'
+      private: no
+
+    - name: 'npm_password'
+      prompt: 'Enter your npm password'
+      private: no
+
+    - name: 'npm_email'
+      prompt: 'Enter your npm email'
+      private: no
+
+  tasks:
+    - name: Include OS-specific variables
+      include_vars: '{{ ansible_os_family | lower }}.yml'
+
+    - name: Combine package lists
+      set_fact:
+        packages: '{{ common_packages | combine(additional_packages | default({})) }}'
+
+    - name: Include OS-specific tasks
+      include_tasks: '{{ ansible_os_family | lower }}_tasks.yml'
+
+    - name: Add NodeSource repository
+      shell: |
+        curl -fsSL https://deb.nodesource.com/setup_lts.x | bash -
+      args:
+        warn: false
+      become: yes
+      when: ansible_os_family == "Debian"
+
+    - name: Install Node.js and npm
+      include_tasks: node_install.yml
+
+    - name: Install Yarn
+      npm:
+        name: yarn
+        global: yes
+
+    - name: Install Oh My Zsh
+      shell: sh -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+      args:
+        creates: '{{ ansible_env.HOME }}/.oh-my-zsh'
+
+    - name: Ensure .ssh directory exists
+      file:
+        path: '{{ ansible_env.HOME }}/.ssh'
+        state: directory
+        mode: '0700'
+      become: yes
+
+    - name: Download encrypted SSH keys from GitHub
+      get_url:
+        url: https://raw.githubusercontent.com/your-username/your-repo/main/ssh_keys.tar.gz.enc
+        dest: '{{ ansible_env.HOME }}/ssh_keys.tar.gz.enc'
+        mode: '0600'
+      become: yes
+
+    - name: Decrypt and extract SSH keys
+      shell: |
+        openssl enc -aes-256-cbc -d -in {{ ansible_env.HOME }}/ssh_keys.tar.gz.enc | tar xzf - -C {{ ansible_env.HOME }}
+      become: yes
+      vars_prompt:
+        - name: 'decryption_password'
+          prompt: 'Enter decryption password for SSH keys'
+          private: yes
+
+    - name: Set correct permissions on SSH files
+      file:
+        path: '{{ ansible_env.HOME }}/.ssh'
+        state: directory
+        mode: '0700'
+        recurse: yes
+      become: yes
+
+    - name: Remove encrypted file
+      file:
+        path: '{{ ansible_env.HOME }}/ssh_keys.tar.gz.enc'
+        state: absent
+      become: yes
+
+    - name: Install VS Code
+      include_tasks: vscode_install.yml
+
+    - name: Sign into GitHub in VS Code
+      shell: code --install-extension GitHub.vscode-pull-request-github && code --add https://github.com/bcourtney5965/dotfiles
+
+    - name: Install browsers
+      include_tasks: browser_install.yml
+
+    - name: Install Docker
+      include_tasks: docker_install.yml
+
+    - name: Setup dotfiles
+      include_tasks: dotfiles_setup.yml
+
+    - name: Sign into Git
+      shell: |
+        git config --global user.name "{{ github_username }}"
+        git config --global user.email "{{ npm_email }}"
+        echo "{{ github_token }}" | gh auth login --with-token
+
+    - name: Sign into npm
+      shell: |
+        npm login --username="{{ npm_username }}" --password="{{ npm_password }}" --email="{{ npm_email }}"
+
+    - name: Verify installations
+      include_tasks: verify_installations.yml
+      tags: [verify]

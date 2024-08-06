@@ -1,0 +1,8 @@
+- name: Update APT package index
+  apt:
+    update_cache: yes
+
+- name: Install packages with APT
+  apt:
+    name: '{{ packages.values() | list }}'
+    state: present

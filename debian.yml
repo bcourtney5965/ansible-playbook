@@ -1,0 +1,4 @@
+---
+additional_packages:
+  build-essential: build-essential
+  curl: curl
