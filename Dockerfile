@@ -24,15 +24,6 @@ RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/
 # Expose port 22 for SSH
 EXPOSE 22
 
-# Copy the local script to the home directory in the container
-COPY config-init /root/config-init
-
-# Make the script executable
-RUN chmod +x /root/config-init
-
-# Run the script from the home directory
-RUN /root/config-init
-
 # Start the SSH daemon
 CMD ["/usr/sbin/sshd", "-D"]
 
