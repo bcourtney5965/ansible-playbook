@@ -33,16 +33,16 @@
 
   tasks:
     - name: Include OS-specific variables
-      include_vars: '{{ ansible_os_family | lower }}.yml'
+      include_vars: 'TaskFiles/{{ ansible_os_family | lower }}.yml'
 
     - name: Combine package lists
       set_fact:
         packages: '{{ common_packages | combine(additional_packages | default({})) }}'
 
     - name: Include OS-specific tasks
-      include_tasks: '{{ ansible_os_family | lower }}_tasks.yml'
+      include_tasks: 'TaskFiles/{{ ansible_os_family | lower }}_tasks.yml'
 
-    - name: Add NodeSource repository
+    - name: Add NodeSource repository (Debian)
       shell: |
         curl -fsSL https://deb.nodesource.com/setup_lts.x | bash -
       args:
@@ -51,7 +51,7 @@
       when: ansible_os_family == "Debian"
 
     - name: Install Node.js and npm
-      include_tasks: node_install.yml
+      include_tasks: 'TaskFiles/node_install.yml'
 
     - name: Install Yarn
       npm:
@@ -101,19 +101,19 @@
       become: yes
 
     - name: Install VS Code
-      include_tasks: vscode_install.yml
+      include_tasks: TaskFiles/vscode_install.yml
 
     - name: Sign into GitHub in VS Code
       shell: code --install-extension GitHub.vscode-pull-request-github && code --add https://github.com/bcourtney5965/dotfiles
 
     - name: Install browsers
-      include_tasks: browser_install.yml
+      include_tasks: TaskFiles/browser_install.yml
 
     - name: Install Docker
-      include_tasks: docker_install.yml
+      include_tasks: TaskFiles/docker_install.yml
 
     - name: Setup dotfiles
-      include_tasks: dotfiles_setup.yml
+      include_tasks: TaskFiles/dotfiles_setup.yml
 
     - name: Sign into Git
       shell: |
@@ -126,5 +126,5 @@
         npm login --username="{{ npm_username }}" --password="{{ npm_password }}" --email="{{ npm_email }}"
 
     - name: Verify installations
-      include_tasks: verify_installations.yml
+      include_tasks: TaskFiles/verify_installations.yml
       tags: [verify]
