@@ -11,6 +11,7 @@
 #       prompt: 'Enter your GitHub personal access token'
 #       private: no
 #   tasks:
+# Doesn't work, even when my repo is public'
 #     - name: Clone the bare repository
 #       git:
 #         repo: 'https://{{ github_username }}:{{ github_token }}@github.com/bcourtney5965/dotfiles.git'
@@ -26,7 +27,7 @@
 #     - name: Source the .bashrc to apply the alias
 #       shell: source {{ ansible_env.HOME }}/.bashrc
 #       args:
-#         executable: /bin/bash
+#         executable: /usr/bin/bash
 
 #     - name: Create backup directory for existing dotfiles
 #       file:
@@ -43,21 +44,21 @@
 #       environment:
 #         dotfiles: '/usr/bin/git --git-dir={{ ansible_env.HOME }}/dotfiles --work-tree={{ ansible_env.HOME }}'
 #       args:
-#         executable: /bin/bash
+#         executable: /usr/bin/bash
 
 #     - name: Checkout the actual content from the bare repository
 #       shell: dotfiles checkout
 #       environment:
 #         dotfiles: '/usr/bin/git --git-dir={{ ansible_env.HOME }}/dotfiles --work-tree={{ ansible_env.HOME }}'
 #       args:
-#         executable: /bin/bash
+#         executable: /usr/bin/bash
 
 #     - name: Set the repository to ignore untracked files
 #       shell: dotfiles config --local status.showUntrackedFiles no
 #       environment:
 #         dotfiles: '/usr/bin/git --git-dir={{ ansible_env.HOME }}/dotfiles --work-tree={{ ansible_env.HOME }}'
 #       args:
-#         executable: /bin/bash
+#         executable: /usr/bin/bash
 
 ---
 - name: Install and configure development environment
@@ -107,8 +108,8 @@
     - name: Include OS-specific tasks
       include_tasks: 'TaskFiles/{{ ansible_os_family | lower }}_tasks.yml'
 
-    - name: Install Node.js and npm
-      include_tasks: 'TaskFiles/node_install.yml'
+    # - name: Install Node.js and npm
+    #   include_tasks: 'TaskFiles/node_install.yml'
 
     # - name: Install Yarn
     #   npm:
@@ -133,11 +134,29 @@
         state: absent
       tags: [dots remove]
 
+    # This one works if the repo is public
+    - name: Run config-init script
+      shell: curl https://raw.githubusercontent.com/bcourtney5965/dotfiles/main/bin/config-init | bash
+      args:
+        executable: /usr/bin/bash
+
+    # This one works!
+    # - name: Clone dotfiles repository - 4
+    #   git:
+    #     repo: 'https://{{ github_username }}:{{ github_token }}@github.com/bcourtney5965/dotfiles'
+    #     dest: '{{ ansible_env.HOME }}/dotfiles'
+    #     version: main
+    #     bare: no
+    #     force: yes
+    #   tags: [dots]
+
+    # Cloning repo:
     # - name: Clone dotfiles repository - 1 (Debrecated for a NON-BARE clone)
     #   shell: git clone --bare https://{{ github_username }}:{{ github_token }}@github.com/bcourtney5965/dotfiles.git {{ ansible_env.HOME }}/dotfiles
     #   args:
     #     creates: '{{ ansible_env.HOME }}/dotfiles/HEAD'
     #   tags: [dots]
+
     # - name: Clone dotfiles repository - 1
     #   git:
     #     repo: 'https://{{ github_username }}:{{ github_token }}@github.com/bcourtney5965/dotfiles.git'
@@ -147,6 +166,7 @@
     #   args:
     #     creates: '{{ ansible_env.HOME }}/dotfiles'
     #   tags: [dots]
+
     # - name: Clone dotfiles repository - 3
     #   git:
     #     repo: 'https://{{ github_username }}:{{ github_token }}@github.com/bcourtney5965/dotfiles'
@@ -155,50 +175,72 @@
     #     force: yes
     #   tags: [dots]
 
-    # experimental:
-    - name: Clone dotfiles bare repository
-      git:
-        repo: 'https://{{ github_username }}:{{ github_token }}@github.com/bcourtney5965/dotfiles.git'
-        dest: '{{ ansible_env.HOME }}/dotfiles'
-        version: main
-        bare: yes
-        force: yes
-      tags: [dots]
+    # current:
+    # - name: Clone dotfiles repository to a dotfiles directory
+    #   git:
+    #     repo: 'https://{{ github_username }}:{{ github_token }}@github.com/bcourtney5965/dotfiles'
+    #     dest: '{{ ansible_env.HOME }}/dotfiles'
+    #     version: main
+    #     force: yes
+    #   tags: [dots]
 
-    # This one works!
-    - name: Clone dotfiles repository - 4
-      git:
-        repo: 'https://{{ github_username }}:{{ github_token }}@github.com/bcourtney5965/dotfiles'
-        dest: '{{ ansible_env.HOME }}/dotfiles'
-        version: main
-        bare: no
-        force: yes
-      tags: [dots]
+    # - name: Clone dotfiles bare repository
+    #   shell: git clone https://{{ github_username }}:{{ github_token }}@github.com/bcourtney5965/dotfiles.git {{ ansible_env.HOME }}/dotfiles
+    #   args:
+    #     creates: '{{ ansible_env.HOME }}/dotfiles'
 
-      # TRY THESE TWO:
-      # this one #1
-    - name: Clone dotfiles bare repository
-      shell: git clone --bare https://{{ github_username }}:{{ github_token }}@github.com/bcourtney5965/dotfiles.git {{ ansible_env.HOME }}/dotfiles
-      args:
-        creates: '{{ ansible_env.HOME }}/dotfiles/HEAD'
-    # And this one #2
-    - name: Clone dotfiles repository
-      git:
-        repo: 'https://{{ github_username }}:{{ github_token }}@github.com/bcourtney5965/dotfiles.git'
-        dest: '{{ ansible_env.HOME }}/'
-        version: main
-      tags: [dots]
-
-    # - name: Clone dotfiles repository - 2
+    # - name: Clone dotfiles repository
     #   git:
     #     repo: 'https://{{ github_username }}:{{ github_token }}@github.com/bcourtney5965/dotfiles.git'
     #     dest: '{{ ansible_env.HOME }}'
     #     version: main
-    #     bare: no
-    #     force: yes
-    #     update: yes
+    #   tags: [dots]
 
-    # NEW STUFF STARTING HERE
+    # And this one #2
+    # - name: Clone dotfiles repository
+    #   git:
+    #     repo: 'https://{{ github_username }}:{{ github_token }}@github.com/bcourtney5965/dotfiles.git'
+    #     dest: '{{ ansible_env.HOME }}'
+    #     version: main
+    #   tags: [dots]
+
+    # And this one #3
+    # - name: Clone dotfiles bare repository
+    #   shell: git clone https://{{ github_username }}:{{ github_token }}@github.com/bcourtney5965/dotfiles.git {{ ansible_env.HOME }}/dotfiles
+    #   args:
+    #     creates: '{{ ansible_env.HOME }}/dotfiles'
+
+    # Running congif-init script:
+    - name: Ensure config-init script has execute permissions
+      file:
+        path: '{{ ansible_env.HOME }}/dotfiles/bin/config-init'
+        mode: '0755'
+      tags: [dots]
+
+    # - name: Run configuration initialization script
+    #   shell: |
+    #     cd {{ ansible_env.HOME }}/dotfiles
+    #     ./bin/config-init
+    #   args:
+    #     executable: /usr/bin/bash
+    #   tags: [dots]
+
+    # TRY THESE TWO:
+    # this one #1
+    # - name: Run configuration initialization script
+    #   shell: |
+    #     curl -H "Authorization: token {{ github_token }}" \
+    #     https://raw.githubusercontent.com/bcourtney5965/dotfiles/main/bin/config-init | bash
+    #   args:
+    #     executable: /usr/bin/bash
+
+    # - name: Run configuration initialization script
+    #   shell: |
+    #     cd ~
+    #     curl -H "Authorization: token {{ github_token }}" \
+    #     https://raw.githubusercontent.com/bcourtney5965/dotfiles/main/bin/config-init | bash
+    #   args:
+    #     executable: /usr/bin/bash
 
     # - name: Download config-init script
     #   get_url:
@@ -213,12 +255,12 @@
     #     mode: '0755'
     #     force_basic_auth: yes
 
-    - name: Run config-init script
-      shell:
-        cmd: '{{ ansible_env.HOME }}/bin/config-init'
-      environment:
-        HOME: '{{ ansible_env.HOME }}'
-      register: config_init_result
+    # - name: Run config-init script
+    #   shell:
+    #     cmd: '{{ ansible_env.HOME }}/bin/config-init'
+    #   environment:
+    #     HOME: '{{ ansible_env.HOME }}'
+    #   register: config_init_result
 
     # - name: Run config-init script
     #   shell:
@@ -229,20 +271,16 @@
     #     GIT_TOKEN: '{{ github_token }}'
     #   register: config_init_result
 
-    - name: Display config-init output
-      debug:
-        var: config_init_result.stdout_lines
+    # - name: Display config-init output
+    #   debug:
+    #     var: config_init_result.stdout_lines
 
     # - name: Remove config-init script
     #   file:
     #     path: '{{ ansible_env.HOME }}/config-init'
     #     state: absent
-    - name: Print completion message
-      debug:
-        msg: 'SUCCESSS!!!!!!!!!!!!'
 
-      # OLD Stuff beyond here
-
+    # OLD Stuff beyond here
     - name: Source the .zshrc to apply the alias
       shell: source {{ ansible_env.HOME }}/.zshrc
       args:
@@ -269,13 +307,6 @@
         mode: '0700'
         recurse: yes
       become: yes
-
-    # - name: Clone dotfiles repository
-    #   git:
-    #     repo: 'https://{{ github_username }}:{{ github_token }}@github.com/bcourtney5965/dotfiles'
-    #     dest: '~/'
-    #     version: main
-    #   tags: [dots]
 
     # make "bin/config-init" script executable
 
