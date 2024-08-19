@@ -140,6 +140,11 @@
       args:
         executable: /usr/bin/bash
 
+    - name: Source the .zshrc to apply the alias
+      shell: source {{ ansible_env.HOME }}/.zshrc
+      args:
+        executable: /usr/bin/zsh
+
     # This one works!
     # - name: Clone dotfiles repository - 4
     #   git:
@@ -217,13 +222,13 @@
         mode: '0755'
       tags: [dots]
 
-    # - name: Run configuration initialization script
-    #   shell: |
-    #     cd {{ ansible_env.HOME }}/dotfiles
-    #     ./bin/config-init
-    #   args:
-    #     executable: /usr/bin/bash
-    #   tags: [dots]
+    - name: Run configuration initialization script
+      shell: |
+        cd {{ ansible_env.HOME }}/dotfiles
+        ./bin/config-init
+      args:
+        executable: /usr/bin/bash
+      tags: [dots]
 
     # TRY THESE TWO:
     # this one #1
