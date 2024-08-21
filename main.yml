@@ -173,30 +173,66 @@
         - { path: '~/.ssh/known_hosts', state: 'file', mode: '0644' }
       become: yes
 
-    - name: Start SSH agent and add key
+    - name: Set up SSH and 1Password
       block:
-        - name: Ensure SSH agent is running
-          ansible.builtin.shell: |
-            eval $(ssh-agent -s)
-            echo $SSH_AUTH_SOCK
-          register: ssh_agent_output
+        - name: Check if 1Password CLI is installed
+          ansible.builtin.command: which op
+          register: op_cli_check
           changed_when: false
+          failed_when: false
 
-        - name: Set SSH_AUTH_SOCK environment variable
+        - name: Set fact for 1Password CLI availability
           ansible.builtin.set_fact:
-            ansible_env: "{{ ansible_env | combine({'SSH_AUTH_SOCK': ssh_agent_output.stdout_lines[-1]}) }}"
+            op_cli_available: '{{ op_cli_check.rc == 0 }}'
 
-        - name: Add SSH key to agent
-          ansible.builtin.shell: |
-            ssh-add ~/.ssh/id_ed25519
-          environment:
-            SSH_AUTH_SOCK: '{{ ansible_env.SSH_AUTH_SOCK }}'
-          register: ssh_add_output
-          changed_when: "'Identity added' in ssh_add_output.stdout"
+        - name: Ensure 1Password CLI is installed (macOS)
+          community.general.homebrew:
+            name: 1password-cli
+            state: present
+          when:
+            - ansible_os_family == "Darwin"
+            - not op_cli_available
+
+        - name: Check if 1Password SSH agent socket exists
+          ansible.builtin.stat:
+            path: '{{ ansible_env.HOME }}/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock'
+          register: onepassword_ssh_agent_socket
+          when: op_cli_available
+
+        - name: Ensure 1Password SSH agent is enabled
+          ansible.builtin.command: op plugin run --plugin-name ssh-agent
+          when:
+            - op_cli_available
+            - not onepassword_ssh_agent_socket.stat.exists | default(false)
+          register: onepassword_ssh_agent_enable
+          changed_when: onepassword_ssh_agent_enable.rc == 0
+          ignore_errors: yes
+
+        - name: Set SSH_AUTH_SOCK for 1Password
+          ansible.builtin.set_fact:
+            ansible_env: "{{ ansible_env | combine({'SSH_AUTH_SOCK': ansible_env.HOME + '/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock'}) }}"
+          when:
+            - op_cli_available
+            - onepassword_ssh_agent_socket.stat.exists | default(false)
+
+        - name: Start system SSH agent if 1Password agent is not available
+          block:
+            - name: Start SSH agent
+              ansible.builtin.shell: |
+                eval $(ssh-agent -s)
+                echo $SSH_AUTH_SOCK
+              register: ssh_agent_output
+              changed_when: false
+
+            - name: Set SSH_AUTH_SOCK for system SSH agent
+              ansible.builtin.set_fact:
+                ansible_env: "{{ ansible_env | combine({'SSH_AUTH_SOCK': ssh_agent_output.stdout_lines[-1]}) }}"
+          when: not op_cli_available or not onepassword_ssh_agent_socket.stat.exists | default(false)
+
       always:
         - name: Ensure SSH_AUTH_SOCK is available for subsequent tasks
           ansible.builtin.set_fact:
-            ansible_env: "{{ ansible_env | combine({'SSH_AUTH_SOCK': ssh_agent_output.stdout_lines[-1]}) }}"
+            ansible_env: "{{ ansible_env | combine({'SSH_AUTH_SOCK': ansible_env.SSH_AUTH_SOCK}) }}"
 
     # This one works!
     # - name: Clone dotfiles repository - 4
