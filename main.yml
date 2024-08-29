@@ -1,3 +1,8 @@
+# Reorganizing notes to self:
+# Roles
+#     Tasks
+#         Modules
+
 # ---
 # - name: Setup dotfiles in development environment
 #   hosts: all
