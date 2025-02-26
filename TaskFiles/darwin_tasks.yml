@@ -4,11 +4,16 @@
   ignore_errors: true
   changed_when: false
 
-- name: Install Homebrew if not installed
-  shell: /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-  when: brew_installed.failed
+- name: Add Homebrew to PATH for Apple Silicon Mac
+  shell: |
+    echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zshrc
+    eval "$(/opt/homebrew/bin/brew shellenv)"
+  when: 
+    - brew_installed.failed 
+    - ansible_architecture == "arm64"
 
 - name: Install packages with Homebrew
-  homebrew:
-    name: '{{ packages.values() | list }}'
+  community.general.homebrew:
+    name: "{{ packages.values() | list }}"
     state: present
+  become: false

@@ -1,4 +1,4 @@
 ---
 additional_packages:
-  - coreutils
-  - gnu-sed
+  coreutils: coreutils
+  gnu-sed: gnu-sed

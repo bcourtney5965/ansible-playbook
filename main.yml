@@ -103,12 +103,13 @@
       private: yes
 
   tasks:
+  
     - name: Include OS-specific variables
       include_vars: 'TaskFiles/{{ ansible_os_family | lower }}.yml'
 
     - name: Combine package lists
       set_fact:
-        packages: '{{ common_packages | combine(additional_packages | default({})) }}'
+        packages: "{{ common_packages | default({}) | combine(additional_packages | default({})) }}"
 
     - name: Include OS-specific tasks
       include_tasks: 'TaskFiles/{{ ansible_os_family | lower }}_tasks.yml'
@@ -126,43 +127,117 @@
       args:
         creates: '{{ ansible_env.HOME }}/.oh-my-zsh'
 
+   # - name: Check if dotfiles directory exists
+   #   stat:
+   #     path: '{{ ansible_env.HOME }}/dotfiles'
+   #   register: dotfiles_dir
+   #   tags: [dots remove]
+
+   # - name: Remove existing dotfiles directory
+   #   when: dotfiles_dir.stat.exists
+   #   file:
+   #     path: '{{ ansible_env.HOME }}/dotfiles'
+   #     state: absent
+   #   tags: [dots remove]
+
+    - name: Find bash location
+      command: which bash
+      register: bash_path
+      changed_when: false
+
+    # - name: Check if dotfiles directory exists
+    #   stat:
+    #     path: "{{ ansible_env.HOME }}/dotfiles"
+    #   register: dotfiles_dir
+    #   become: false
+
+    - name: Set home directory fact
+      set_fact:
+        user_home: "{{ lookup('env', 'HOME') }}"
+      become: false
+
+    - name: Check .ansible directory
+      stat:
+        path: "{{ user_home }}/.ansible"
+      register: ansible_dir
+      become: false
+
+    - name: Ensure .ansible directory exists
+      file:
+        path: "{{ user_home }}/.ansible"
+        state: directory
+        mode: '0755'
+      become: false
+      when: not ansible_dir.stat.exists
+
+    - name: Check .ansible/tmp directory
+      stat:
+        path: "{{ user_home }}/.ansible/tmp"
+      register: ansible_tmp_dir
+      become: false
+
+    - name: Ensure .ansible/tmp directory exists
+      file:
+        path: "{{ user_home }}/.ansible/tmp"
+        state: directory
+        mode: '0755'
+      become: false
+      when: not ansible_tmp_dir.stat.exists
+
     - name: Check if dotfiles directory exists
       stat:
-        path: '{{ ansible_env.HOME }}/dotfiles'
+        path: "{{ user_home }}/dotfiles"
       register: dotfiles_dir
-      tags: [dots remove]
+      become: false
+      environment:
+        TMPDIR: "{{ user_home }}/.ansible/tmp"
+      
+    # - name: Remove existing dotfiles directory
+    #   file:
+    #     path: "{{ ansible_env.HOME }}/dotfiles"
+    #     state: absent
+    #   when: dotfiles_dir.stat.exists
+    #   become: false
 
-    - name: Remove existing dotfiles directory
-      when: dotfiles_dir.stat.exists
-      file:
-        path: '{{ ansible_env.HOME }}/dotfiles'
-        state: absent
-      tags: [dots remove]
+    # - name: Run config-init script
+    #   shell: curl https://raw.githubusercontent.com/bcourtney5965/dotfiles/main/bin/config-init | /bin/bash
+    #   args:
+    #     executable: /bin/bash
+    #   become: false
+    #   environment:
+    #     HOME: "{{ ansible_env.HOME }}"
 
-    # This one works if the repo is public
-    - name: Run config-init script
-      shell: curl https://raw.githubusercontent.com/bcourtney5965/dotfiles/main/bin/config-init | bash
-      args:
-        executable: /usr/bin/bash
+    # - name: Find zsh location
+    #   command: which zsh
+    #   register: zsh_path
+    #   changed_when: false
+      
+  #   - name: Source the .zshrc to apply the alias
+  #     shell: source {{ ansible_env.HOME }}/.zshrc
+  #     args:
+  #       executable: "{{ zsh_path.stdout }}"
+  #     become: false  # Add this to ensure it runs as the correct user
+  #     environment:
+  #       HOME: "{{ ansible_env.HOME }}"
 
-    - name: Source the .zshrc to apply the alias
-      shell: source {{ ansible_env.HOME }}/.zshrc
-      args:
-        executable: /usr/bin/zsh
+  #  - name: Source the .zshrc to apply the alias
+  #    shell: source {{ ansible_env.HOME }}/.zshrc
+  #    args:
+  #      executable: /usr/bin/zsh
 
-    - name: Decrypt SSH private key
-      ansible.builtin.command:
-        cmd: ansible-vault decrypt ~/.ssh/id_ed25519
-      become: yes
-      vars:
-        ansible_become_pass: '{{ decryption_password }}'
+  #   - name: Decrypt SSH private key
+  #     ansible.builtin.command:
+  #       cmd: ansible-vault decrypt ~/.ssh/id_ed25519
+  #     become: yes
+  #     vars:
+  #       ansible_become_pass: '{{ decryption_password }}'
 
-    - name: Decrypt known_hosts file
-      ansible.builtin.command:
-        cmd: ansible-vault decrypt ~/.ssh/known_hosts
-      become: yes
-      vars:
-        ansible_become_pass: '{{ decryption_password }}'
+  #   - name: Decrypt known_hosts file
+  #     ansible.builtin.command:
+  #       cmd: ansible-vault decrypt ~/.ssh/known_hosts
+  #     become: yes
+  #     vars:
+  #       ansible_become_pass: '{{ decryption_password }}'
 
     - name: Set correct permissions on SSH directory and files
       ansible.builtin.file:
